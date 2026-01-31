@@ -1,174 +1,283 @@
-import { Chip, Radio } from '@mui/material';
-import React from 'react'
+import React, { useEffect } from 'react'
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { NavLink } from 'react-router';
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from 'react';
+import { useProposalList } from '../Context/ProposalProvider';
+import { downloadFile } from '../Utils/downloadFile';
+import { useLetterList } from '../Context/LetterProvider';
 import Table from '../Components/Table';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import { formatDateTime } from "../utils/formatDateTime";
+import { Chip, Menu, MenuItem } from '@mui/material';
+import api from '../APIs/apiService';
+import { useApiPromise } from '../Hooks/useApi';
+import LetterTable from '../Components/LetterTable';
+import SearchIcon from '@mui/icons-material/Search';
+import { debounce } from "lodash";
+
 
 const Letters = () => {
-  const [selectedId, setSelectedId] = React.useState(null);
-  const proposals = [
-    {
-      id: 1,
-      ref: "PR-001",
-      title: "Road Repair Project",
-      block: 'A',
-      location: "Block A",
-      amount: 50000,
-      fund: "Municipal Fund",
-      status: "Initiated",
-      action: "View"
-    },
-    {
-      id: 2,
-      ref: "PR-002",
-      title: "Community Library Upgrade",
-      block: 'B',
-      location: "Block B",
-      amount: 120000,
-      fund: "Education Fund",
-      status: "Initiated",
-      action: "View"
-    },
-    {
-      id: 3,
-      ref: "PR-003",
-      title: "Street Light Installation",
-      block: 'C',
-      location: "Block C",
-      amount: 30000,
-      fund: "Public Safety Fund",
-      status: "Initiated",
-      action: "View"
-    },
-    {
-      id: 4,
-      ref: "PR-004",
-      title: "Drainage Maintenance",
-      block: 'D',
-      location: "Block D",
-      amount: 45000,
-      fund: "Infrastructure Fund",
-      status: "Initiated",
-      action: "View"
-    },
-    {
-      id: 5,
-      ref: "PR-004",
-      title: "Drainage Maintenance",
-      block: 'D',
-      location: "Block D",
-      amount: 45000,
-      fund: "Infrastructure Fund",
-      status: "Initiated",
-      action: "View"
-    },
-    {
-      id: 6,
-      ref: "PR-004",
-      title: "Drainage Maintenance",
-      block: 'D',
-      location: "Block D",
-      amount: 45000,
-      fund: "Infrastructure Fund",
-      status: "Initiated",
-      action: "View"
-    },
-    {
-      id: 7,
-      ref: "PR-004",
-      title: "Drainage Maintenance",
-      block: 'D',
-      location: "Block D",
-      amount: 45000,
-      fund: "Infrastructure Fund",
-      status: "Initiated",
-      action: "View"
-    }
-  ];
+  const [dropdown, setDropdown] = useState(false);
+  const [filterLetterList,setFilterLetterList] = useState([]);
+  const { letterList, setLetterList } = useLetterList();
+  const { run, loading, error } = useApiPromise();
+  const statuses = ["Pending", "Sent", "Draft", "Received"];
+    const [searchValue,setSearchValue] = useState('');
 
-  const handleSelect = (id) => {
-    setSelectedId(id);
-    console.log("This is id", id)
+  useEffect(()=>{
+    setFilterLetterList(letterList);
+
+  },[letterList])
+
+const getChildRows = (row) => {
+ 
+  if (row.referrals && row.referrals.length > 0) {
+    return row.referrals.map((ref) => ({
+      id: ref.id,
+      ref_no: ref.referral_no,
+      subject: ref.subject,
+      attachments : ref.attachments,
+      recipient_name: ref.referred_to_name,
+      recipient_designation: ref.referred_to_designation,
+      next_followup_date: row.next_followup_date, 
+      status: ref.status,
+      created_at: ref.created_at,
+      parent_ref_no: row.ref_no, 
+    }));
   }
 
+  // If no referrals exist → no children
+  return [];
+};
+
+
+
   const columns = [
+
+
+
     {
-      field: "id",
-      headerName: "Select",
-      width: 80,
-      sortable: false,
-      renderCell: (params) => (
-        <div className='h-full w-full flex items-center  '>
+    field: "ref_no",
+    headerName: "Ref",
+    flex: 1.2,
+    renderCell: (params) => {
+      const row = params.row;
+      const childCount = row.referrals?.length || 0;
 
-          <input
-            className='size-4'
-            type='checkbox'
-            checked={selectedId === params.row.id}
-            onChange={() => handleSelect(params.row.id)}
-            value={params.row.id}
-
-          />
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span>{row.ref_no}</span>
+          {childCount > 0 && (
+            <Chip
+              label={childCount}
+              size="small"
+              color="secondary"
+              sx={{
+                fontSize: "0.75rem",
+                height: "22px",
+                borderRadius: "50%",
+                color: "#fff",
+              }}
+            />
+          )}
         </div>
-
-      )
+      );
     },
-    { field: "title", headerName: "Proposal Title", flex: 2 },
-    { field: "fund", headerName: "Fund Source", flex: 1 },
-    { field: "amount",
-       headerName: "Amount",
-        flex: 1 ,
-         renderCell: (params) => (
-          <div className='w-full h-full flex items-center'>
-             <p>
-        ₹ {params.value}
-      </p>
-          </div>
-     
-    )
-      },
+  },
+    { field: "subject", headerName: "Subject", flex: 2 },
+    { field: "recipient_name", headerName: "To", flex: 1 },
+    // { field: "recipient_designation", headerName: "Position", flex: 1 },
     {
-      field: "status", headerName: "Status", flex: 1,
+      field: "next_followup_date", headerName: "Next Follow Up", flex: 1,
+      renderCell: (params) => (
+        <span>{formatDateTime(params.row.next_followup_date)}</span>
+      ),
+    },
+    { field: "letter_type", headerName: "Type", flex: 1 },
+    {
+      field: "status",
+      headerName: "Status",
+      flex: 1,
       renderCell: (params) => {
-        let color;
-        switch (params.value) {
-          case "Initiated":
-            color = "primary";
-            break;
-          case "Approved":
-            color = "success";
-            break;
-          case "Rejected":
-            color = "error";
-            break;
-          case "Pending":
-            color = "warning";
-            break;
-          default:
-            color = "secondary";
-        }
+        const [anchorEl, setAnchorEl] = React.useState(null);
+        const open = Boolean(anchorEl);
+
+        const handleClick = (event) => {
+          setAnchorEl(event.currentTarget);
+        };
+
+        const handleClose = async (newStatus) => {
+          setAnchorEl(null);
+          if (!newStatus || newStatus === params.value) return;
+
+
+          try {
+            await run(() => api.put(`/admin/letters/${params.row.id}/status`, { status: newStatus }), "Status Update.");
+            setLetterList(prev =>
+              prev.map(item =>
+                item.id === params.row.id
+                  ? { ...item, status: newStatus }
+                  : item
+              )
+            );
+
+
+
+
+          } catch (error) {
+            console.error("Error updating status", error);
+          }
+        };
+
+
+        const colorMap = {
+          sent: "primary",
+          pending: "secondary",
+          draft: "warning",
+          received: "success",
+        };
+
         return (
+          <>
+            <Chip
+              label={params?.value?.toLowerCase()}
+              color={colorMap[params.value.toLowerCase()] || "secondary"}
+              variant="outlined"
+              size="small"
+              sx={{ cursor: "pointer", userSelect: "none" }}
+              onClick={handleClick}
+            />
 
-          <Chip label={params.value} color={color} variant='outlined' size="small" />
+            <Menu anchorEl={anchorEl} open={open} onClose={() => handleClose()}>
+              {statuses.map((status) => (
+                <MenuItem
+                  key={status}
+                  selected={status === params.value}
+                  onClick={() => handleClose(status)}
+                >
+                  {status}
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
         );
-      }
-
+      },
     },
 
-  ]
+
+    {
+      field: "attachments",
+      headerName: "Letter",
+      flex: 1,
+      renderCell: (params) => {
+        const fileUrl = params.row.attachments?.[0]?.file; // safe access
+        if (!fileUrl) return <span>No File</span>;
+
+        return (
+          <div className="">
+            <button
+              onClick={() => downloadFile(fileUrl)}
+              className="cursor-pointer text-primary"
+            >
+              <PictureAsPdfIcon />
+            </button>
+          </div>
+        );
+      },
+    },
+    {
+      field: "created_at",
+      headerName: "Created",
+      flex: 1,
+      renderCell: (params) => (
+        <span>{formatDateTime(params.row.created_at)}</span>
+      ),
+    }
+
+
+
+  ];
+
+
+
+ const handleSearch = debounce((value, list, setList) => {
+  const lowerSearch = value.toLowerCase();
+  const datalist = list.filter(e =>
+    e.ref_no.toLowerCase().includes(lowerSearch) ||
+    e.recipient_name.toLowerCase().includes(lowerSearch) ||
+    e.recipient_designation.toLowerCase().includes(lowerSearch) ||
+    e.subject.toLowerCase().includes(lowerSearch) ||
+    e.status.toLowerCase().includes(lowerSearch)  
+  );
+  setList(datalist);
+}, 300);
+
+useEffect(() => {
+  if (searchValue) {
+    handleSearch(searchValue, letterList, setFilterLetterList);
+  } else {
+    setFilterLetterList(letterList);
+  }
+}, [searchValue, letterList]);
+
+
   return (
-    <section id='letter' className="pt-5" >
-      <div className='  '>
+    <section id='lettes' className="mb-10">
+      <header className='flex justify-end mb-5 mt-9'>
+        <div className="relative flex gap-2">
+          <div className='border flex items-center bg-white  border-gray-300 rounded-sm p-1  text-sm  transition-all gap-2 hover:shadow-md hover:border-gray-400 '>
+            <div className='flex items-center gap-1 pl-1'>
+              <SearchIcon style={{ fontSize: 20 }} className='text-gray-400 ' />
 
-        <h2 className='pt-5 mb-3 '>Select Proposal </h2>
 
-      <Table columns={columns} rows={proposals} />
-      </div>
+              <input type="text" id='searchbox' value={searchValue} onChange={(e)=>setSearchValue(e.target.value)} placeholder='Search Letter ...' className='group h-full outline-none' />
+            </div>
+            <button className='btn bg-primary'>
+               <SearchIcon style={{ fontSize: 20 }} className='text-white' />
+            </button>
+
+          </div>
+          <button onClick={() => setDropdown((prev) => !prev)} className='btn bg-primary !text-sm text-white rounded shadow  transition duration-300 ' >
+            <AddCircleIcon className='mr-1' />
+            New Letter
 
 
-          <h2 className='mt-10'>Letters Details</h2>
-      <div className='h-80 mt-3 shadow-xl bg-white'>
-        <form action="#">
+          </button>
+          <AnimatePresence>
+            {dropdown && (
+              <motion.div
+                initial={{ y: 10, opacity: 0.3 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 5, opacity: 0.3 }}
+                transition={{ duration: 0.1 }}
+                className="absolute top-[110%] right-0 bg-white rounded shadow-lg   z-2"
+              >
+                <ul>
+                  <li>
+                    <NavLink to="generalletters" className="px-3 pt-4  block text-nowrap text-sm text-start">
+                      <AddCircleIcon className='mr-1' sx={{ fontSize: 20 }} />  General Letters
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="proposalletters" className="px-3 py-4 block text-nowrap text-sm text-start sele">
+                      <AddCircleIcon className='mr-1' sx={{ fontSize: 20 }} />  Proposal Letters
+                    </NavLink>
+                  </li>
+                </ul>
 
-        </form>
-      </div>
+
+              </motion.div>)}
+          </AnimatePresence>
+        </div>
+      </header>
+      <LetterTable
+        dataname="Letters"
+        columns={columns}
+        rows={filterLetterList.filter((x) => !x.parent_ref_no)}
+        getChildRows={getChildRows}
+      />
+
     </section>
   )
 }

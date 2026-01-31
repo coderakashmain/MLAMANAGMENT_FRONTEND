@@ -1,12 +1,12 @@
 import React from 'react'
 import { DataGrid } from "@mui/x-data-grid";
 
-const Table = React.memo(({ columns, rows }) => {
+const Table = React.memo(({ columns, rows,dataname }) => {
 
 
 
     return (
-        <div style={{ width: "100%" }} className='shadow-xl'>
+        <div style={{ width: "100%" }} className='shadow-md'>
             <DataGrid
                 rows={rows}
                 columns={columns}
@@ -33,7 +33,7 @@ const Table = React.memo(({ columns, rows }) => {
                     }
                 }}
                 localeText={{
-                    noRowsLabel: "No discount available",
+                    noRowsLabel: `No ${dataname ? dataname : "Proposals"} available`,
                 }}
 
             />

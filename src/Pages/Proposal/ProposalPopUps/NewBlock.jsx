@@ -5,11 +5,13 @@ import TextField from '@mui/material/TextField'
 import { useNavigate } from 'react-router'
 import api from '../../../APIs/apiService'
 import { useApiPromise } from '../../../Hooks/useApi'
+import { useBlock } from '../../../Context/BlocksProvider'
 import SubmitLoader from '../../../Components/Fallback/SubmitLoader'
 
 const NewBlock = () => {
   const [block, setBlock] = useState('');
   const navigate = useNavigate();
+  const {setBlockList} = useBlock();
   const {run,loading,error} = useApiPromise();
   const style = {
     "& .MuiOutlinedInput-root": {
@@ -34,8 +36,8 @@ const NewBlock = () => {
      e.preventDefault();
      if(!block ) return;
      
-    await run(()=> api.post('/admin/add/AddBlock',{block},{token : false,retryOnAuthFail : false}));
-     
+     const res = await run(()=> api.post('/admin/add/AddBlock',{block},{token : false,retryOnAuthFail : false}),"New Block added.");
+    //  setBlockList((prev)=>[...prev,res.data])
     navigate('..');
   };
 

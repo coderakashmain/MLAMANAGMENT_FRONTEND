@@ -11,32 +11,106 @@ import BackButton from "../../Components/BackButton";
 import Popup from "../../Components/Popup";
 import ClosePopUp from "../../Components/ClosePopUp";
 import { Outlet, useNavigate } from "react-router";
+import api from "../../APIs/apiService";
+import { useApiPromise } from "../../Hooks/useApi";
+import { useFundsources } from "../../Context/FundSourceProvider";
+import { useBlock } from "../../Context/BlocksProvider";
+import { useGp } from "../../Context/GpProvider";
+import { useVillage } from "../../Context/VillagePorvider";
+import { useEffect } from "react";
+import { useProposalList } from "../../Context/ProposalProvider";
+
+
 const AddProposal = () => {
     const navigate = useNavigate();
+    const { run, loading, error } = useApiPromise();
+    const { blocksList } = useBlock();
+    const { fundsourceList } = useFundsources();
+    const { gpList, getGp, setGpList } = useGp();
+    const { getVillage, villageList, setVillageList } = useVillage();
+    const {setProposalList} = useProposalList();
+
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        block: null,
-        gramPanchayat: null,
-        village: null,
+        block: '',
+        gramPanchayat: '',
+        village: '',
         amount: "",
         fundSource: "",
+        proposalType : "",
         attachment: null,
         status: "",
     });
-    const [popUp, setPopUp] = useState(false);
 
- 
-    const blocks = ["Block A", "Block B", "Block C"];
-    const gps = ["GP 1", "GP 2", "GP 3"];
-    const villages = ["Village 1", "Village 2", "Village 3"];
-    const statuses = ["Pending", "Approved", "Rejected"];
-    const funds = ["MLALAD", "WOCD", "CM Spacial Grant"];
+    useEffect(() => {
+        if (formData.block) {
+            setFormData(prev => ({
+                ...prev,
+                gramPanchayat: ''
+            }));
+            setGpList([]);
 
-    const optionsWithAddBlock = [...blocks, "Add New"];
-    const optionsWithAddGps = [...gps, "Add New"];
-    const optionsWithAddVillages = [...villages, "Add New"];
-    const optionsWithAddFunds = [...funds, "Add New"];
+
+
+            const matchedBlock = blocksList.find(e => e.name === formData.block);
+            if (matchedBlock) {
+                getGp(matchedBlock.id);
+            } else {
+                setGpList([]);
+                setFormData(prev => ({
+                    ...prev,
+                    gramPanchayat: ''
+                }));
+            }
+        }
+    }, [formData.block]);
+
+    useEffect(() => {
+        if (formData.gramPanchayat) {
+
+            setFormData(prev => ({
+                ...prev,
+                village: ''
+            }));
+            setVillageList([]);
+
+
+            const matchGp = gpList.find(e => e.name === formData.gramPanchayat);
+            if (matchGp) {
+                getVillage(matchGp.id);
+            } else {
+                setVillageList([]);
+                setFormData(prev => ({
+                    ...prev,
+                    village: ''
+                }));
+            }
+        }
+    }, [formData.gramPanchayat]);
+
+
+  
+
+
+
+
+    const statuses = ["Pending", "Approved", "Rejected","Initiated","Submitted"];
+    const proposalTypes = [
+        "Local / Community",
+        "Commercial / Business",
+        "Educational",
+        "Health & Sanitation",
+        "Environment",
+        "Social Welfare",
+        "Government Schemes / Grants"
+    ];
+
+
+    const optionsWithAddBlock = [...blocksList.map(b => b.name), "Add New"];
+    const optionsWithAddGps = [...gpList.map(b => b.name), "Add New"];
+    const optionsWithAddVillages = [...villageList.map(b => b.name), "Add New"];
+    const optionsWithAddFunds = [...fundsourceList.map(b => b.name), "Add New"];
     const optionsWithAddStatuses = [...statuses, "Add New"];
 
 
@@ -48,27 +122,61 @@ const AddProposal = () => {
         setFormData({ ...formData, attachment: e.target.files[0] });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log(formData);
+        const data = new FormData();
+        data.append("title", formData.title);
+        data.append("description", formData.description);
+        data.append("block", formData.block);
+        data.append("gramPanchayat", formData.gramPanchayat);
+        data.append("village", formData.village);
+        data.append("amount", formData.amount);
+        data.append("proposalType", formData.proposalType);
+        data.append("fundSource", formData.fundSource);
+        data.append("status", formData.status);
+
+
+        if (formData.attachment) {
+            data.append("attachment", formData.attachment);
+        }
+         const res = await run(() => api.post('/admin/proposal/newproposal', data, {
+            headers: { "Content-Type": "multipart/form-data" },
+            
+        }),"Proposal added successfully.");
+        
+        setProposalList((prev) => [res.data,...prev]);
+        setFormData({
+            title: "",
+            description: "",
+            block: '',
+            gramPanchayat: '',
+            village: '',
+            amount: "",
+            fundSource: "",
+            proposalType: "",
+            attachment: null,
+            status: "",
+        });
     };
 
     const handleReset = () => {
         setFormData({
             title: "",
             description: "",
-            block: null,
-            gramPanchayat: null,
-            village: null,
+            block: '',
+            gramPanchayat: '',
+            village: '',
             amount: "",
             fundSource: "",
+            proposalType: "",
             attachment: null,
             status: "",
         });
     };
 
-    const handleAddClick = (path) => {
-        navigate(path);
+    const handleAddClick = (path,block,gp) => {
+        
+        navigate(path,{state : {block,gp}});
     }
 
     return (
@@ -180,9 +288,13 @@ const AddProposal = () => {
                                     if (newValue === 'Add New') {
                                         handleAddClick('addBlock');
                                     } else {
-
+                                     
                                         handleChange("block", newValue);
                                     }
+                                }}
+                                onInputChange={(e, newInputValue) => {
+
+                                    handleChange("block", newInputValue);
                                 }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Block" size="small" className="bg-white" />
@@ -215,11 +327,15 @@ const AddProposal = () => {
 
                                 onChange={(e, newValue) => {
                                     if (newValue === 'Add New') {
-                                        handleAddClick("addGp");
+                                        handleAddClick("addGp",formData.block);
                                     } else {
 
                                         handleChange("gramPanchayat", newValue);
                                     }
+                                }}
+                                onInputChange={(e, newInputValue) => {
+
+                                    handleChange("gramPanchayat", newInputValue);
                                 }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Gram Panchayat" size="small" className="bg-white" />
@@ -250,11 +366,15 @@ const AddProposal = () => {
                                 }}
                                 onChange={(e, newValue) => {
                                     if (newValue === 'Add New') {
-                                        handleAddClick("addVillage");
+                                        handleAddClick("addVillage",formData.block,formData.gramPanchayat);
                                     } else {
 
                                         handleChange("village", newValue);
                                     }
+                                }}
+                                onInputChange={(e, newInputValue) => {
+
+                                    handleChange("village", newInputValue);
                                 }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Village" size="small" className="bg-white" />
@@ -264,7 +384,7 @@ const AddProposal = () => {
 
                     </div>
 
-                    <div className="mt-5 flex gap-5 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
                         <div className="w-full">
                             <p className="text-sm mb-2 font-bold">Fund Resource <span className="text-error">*</span> </p>
                             <Autocomplete
@@ -295,8 +415,50 @@ const AddProposal = () => {
                                         handleChange("fundSource", newValue);
                                     }
                                 }}
+                                onInputChange={(e, newInputValue) => {
+
+                                    handleChange("fundSource", newInputValue);
+                                }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Funds Source" size="small" className="bg-white" />
+                                )}
+                            />
+
+                        </div>
+                        {/* proposal types */}
+                        <div className="w-full">
+                            <p className="text-sm mb-2 font-bold">Proposal Type <span className="text-error">*</span> </p>
+                            <Autocomplete
+                                freeSolo
+                                options={proposalTypes}
+                                value={formData.proposalType || ""}
+                                sx={{
+
+                                    "& .MuiOutlinedInput-root": {
+
+                                        "&:hover fieldset": {
+                                            borderColor: "#99a1af",
+                                        },
+                                        "&.Mui-focused fieldset": {
+                                            borderColor: "var(--color-primary)",
+                                        },
+                                    },
+                                    "& .MuiInputLabel-root.Mui-focused": {
+                                        color: "var(--color-primary)",
+                                    },
+
+                                }}
+                                onChange={(e, newValue) => {
+
+                                    handleChange("proposalType", newValue);
+
+                                }}
+                                onInputChange={(e, newInputValue) => {
+
+                                    handleChange("proposalType", newInputValue);
+                                }}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Proposal Type" size="small" className="bg-white" />
                                 )}
                             />
 
@@ -304,7 +466,7 @@ const AddProposal = () => {
 
                         {/* Amount */}
                         <div className="w-full">
-                            <p className="text-sm mb-2 font-bold">Proposed Amount (₹)</p>
+                            <p className="text-sm mb-2 font-bold">Proposal Amount (₹)</p>
                             <TextField
                                 label="e.g.,45000"
                                 size="small"
@@ -369,6 +531,10 @@ const AddProposal = () => {
                                         handleChange("status", newValue);
                                     }
                                 }}
+                                onInputChange={(e, newInputValue) => {
+
+                                    handleChange("status", newInputValue);
+                                }}
 
 
                                 renderInput={(params) => (
@@ -409,16 +575,17 @@ const AddProposal = () => {
                         </Button>
 
                         <button
-                            className="btn bg-primary text-alwaysWhite rounded-sm shadow-sm"
+                            disabled={loading}
+                            className={`btn bg-primary text-alwaysWhite rounded-sm shadow-sm ${loading ? 'opacity-50' : ''}`}
                         >
-                            Save
+                            {loading ? "Saving..." : "Save"}
                         </button>
                     </Box>
                 </form>
             </div>
 
             {/* Pop Ups */}
-            <Outlet/>
+            <Outlet />
         </section>
     );
 };

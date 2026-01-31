@@ -7,10 +7,20 @@ import HomeRouter from './Router/HomeRouter';
 import ProposalRouter from './Router/ProposalRouter';
 import ScreenProvider from './Context/ScreenProvider';
 import AuthProvider from './Context/AuthProvider';
+import BlocksProvider from './Context/BlocksProvider';
+import GpProvider from './Context/GpProvider';
+import VillagePorvider from './Context/VillagePorvider';
+import FundSourceProvider from './Context/FundSourceProvider';
+import ProposalProvider from './Context/ProposalProvider';
+import LetterRouter from './Router/LetterRouter';
+import LetterProvider from './Context/LetterProvider';
+import SnackbarProvider from './Context/SnackbarContext';
 
 
 
-
+const ProposalLetter = lazy(() => import('./Pages/LettersChild/ProposalLetter'));
+const GeneralLetter = lazy(() => import('./Pages/LettersChild/GeneralLetter'));
+const Letters = lazy(() => import('./Pages/Letters'));
 const NewBlock = lazy(() => import('./Pages/Proposal/ProposalPopUps/NewBlock'));
 const NewGrapP = lazy(() => import('./Pages/Proposal/ProposalPopUps/NewGrapP'));
 const NewVillage = lazy(() => import('./Pages/Proposal/ProposalPopUps/NewVillage'));
@@ -19,7 +29,6 @@ const Login = lazy(() => import('./Pages/Login'));
 const PageNotFound = lazy(() => import('./Pages/PageNotFound'));
 const AddProposal = lazy(() => import('./Pages/Proposal/AddProposal'));
 const Communication = lazy(() => import('./Pages/Communication'));
-const Letters = lazy(() => import('./Pages/Letters'));
 const Setting = lazy(() => import('./Pages/Setting'));
 const Funds = lazy(() => import('./Pages/Funds'));
 const Dashboard = lazy(() => import('./Pages/Dashboard'));
@@ -30,11 +39,11 @@ function App() {
   const router = createBrowserRouter([
     {
       path: '/',
-      element: <ScreenProvider><AuthProvider><IndexRouter /></AuthProvider></ScreenProvider>,
+      element: <SnackbarProvider><ScreenProvider><AuthProvider><IndexRouter /></AuthProvider></ScreenProvider></SnackbarProvider> ,
       children: [
         {
           path: "",
-          element: <HomeRouter />,
+          element: <ProposalProvider><HomeRouter /></ProposalProvider>,
           children: [
             {
               path: "dashboard",
@@ -42,7 +51,7 @@ function App() {
             },
             {
               path: "proposals",
-              element: <ProposalRouter />,
+              element:<BlocksProvider><GpProvider><VillagePorvider><FundSourceProvider> <ProposalRouter /></FundSourceProvider></VillagePorvider></GpProvider></BlocksProvider>,
               children: [
                 {
                   path: '',
@@ -78,7 +87,22 @@ function App() {
             },
             {
               path: "letters",
-              element: <Suspense fallback={<Loader />}><Letters /> </Suspense>
+              element: <LetterProvider><LetterRouter /></LetterProvider>,
+              children :[
+                {
+                  path : '',
+                  element : <Suspense fallback={<Loader />}><Letters /> </Suspense> 
+                },
+                {
+                  path : 'generalletters',
+                  element : <Suspense fallback={<Loader />}><GeneralLetter /> </Suspense>
+                },
+                {
+                  path : 'proposalletters',
+                   element : <Suspense fallback={<Loader />}><ProposalLetter /> </Suspense>
+                },
+
+              ]
             },
             {
               path: "funds",

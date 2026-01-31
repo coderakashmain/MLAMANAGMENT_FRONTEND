@@ -33,10 +33,10 @@ const Header = () => {
   };
 
   return (
-    <header className='w-full bg-bg  sticky top-0 left-0 z-10000 mb-4 h-15 flex items-center p-1   justify-between'>
+    <header className='w-full bg-bg  sticky top-0 left-0 z-10 mb-4 h-15 flex items-center p-1   justify-between'>
       <div>
         <p className="text-sm ">
-          Pages /{' '}
+          <span className='text-gray'>Pages /</span>{' '}
           {finalLocation.length === 0 ? (
             <span className="font-semibold cursor-pointer " onClick={() => navigate('/')}>
               Dashboard
@@ -45,7 +45,7 @@ const Header = () => {
             finalLocation.map((p, index) => (
               <span key={index}>
                 <span
-                  className={`font-medium hover:text-blue-600 cursor-pointer transition`}
+                  className={`font-medium  hover:text-blue-600 cursor-pointer transition`}
                   onClick={() => handleNavigate(index)}
                 >
                   {p.charAt(0).toUpperCase() + p.slice(1)}

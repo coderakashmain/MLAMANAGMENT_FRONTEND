@@ -8,7 +8,7 @@ const BackButton = ({replace = false}) => {
         navigate("..",{replace : replace});
     }
   return (
-   <button onClick={handleNavigate} className='back rounded-sm py-2 cursor-pointer  flex gap-1 bg-white !text-black shadow-sm !hover:bg-WHITE !px-3 !text-sm select-none'>
+   <button onClick={handleNavigate} className='back rounded-sm py-2  cursor-pointer  flex items-center gap-1 bg-white !text-black shadow-sm !hover:bg-WHITE !px-3 !text-sm select-none'>
     <ArrowBackIcon style={{fontSize : 18}}/>  Back
    </button>
   )
